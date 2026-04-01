@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
 
+import 'features/home/home_view.dart';
+
 void main() {
   runApp(const SolLensApp());
 }
@@ -31,9 +33,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   // Lista de telas para cada aba
   static const List<Widget> _widgetOptions = <Widget>[
-    Center(
-      child: Text('🔍 Aba de Busca Manual', style: TextStyle(fontSize: 24)),
-    ),
+    HomeView(),
     Center(
       child: Text(
         '📸 Aba do Scanner (Sol Lens)',
