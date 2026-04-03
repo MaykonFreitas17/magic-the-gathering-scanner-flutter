@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/magic_card.dart';
 import '../../services/scryfall_service.dart';
+import '../details/card_detail_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -110,42 +111,50 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildCardItem(MagicCard card) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: card.imageUrl.isNotEmpty
-                ? Image.network(
-                    card.imageUrl,
-                    fit: BoxFit.contain, // Contain manterá a carta inteira
-                    width: double.infinity,
-                  )
-                : Container(
-                    color: Colors.grey[900],
-                    width: double.infinity,
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.grey,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => CardDetailView(card: card)),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: card.imageUrl.isNotEmpty
+                  ? Image.network(
+                      card.imageUrl,
+                      fit: BoxFit.contain, // Contain manterá a carta inteira
+                      width: double.infinity,
+                    )
+                  : Container(
+                      color: Colors.grey[900],
+                      width: double.infinity,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          card.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          card.setName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            card.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            card.setName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 }
