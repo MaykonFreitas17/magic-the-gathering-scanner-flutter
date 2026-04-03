@@ -3,7 +3,7 @@
 Um aplicativo mobile focado em utilidade para jogadores de Magic: The Gathering. Escaneie cartas físicas, consulte o Oracle text em PT-BR, entenda mecânicas instantaneamente e gerencie seus decks com análises de Inteligência Artificial.
 
 ## 📊 Status do Projeto
-**Progresso Geral:** 0%
+**Progresso Geral:** 15%
 *(Marque os checkboxes com um 'x' para acompanhar o desenvolvimento)*
 
 ---
@@ -17,13 +17,13 @@ Um aplicativo mobile focado em utilidade para jogadores de Magic: The Gathering.
 - [ ] Criar a estrutura base de navegação (BottomNavigationBar) com as 3 abas principais (Busca, Scanner, Meus Decks).
 
 ### 🔍 Épico 2: A Taverna (Busca Manual & Filtros)
-- [ ] Integrar a API da Scryfall (`http` package).
+- [x] Integrar a API da Scryfall (`http` package).
 - [ ] Desenvolver a barra de pesquisa por texto (nome/descrição).
 - [ ] Criar a interface de filtros avançados:
   - [ ] Filtro por Cores (Símbolos de Mana).
   - [ ] Filtro por Custo de Mana (CMC).
   - [ ] Filtro por Edição/Data de Lançamento.
-- [ ] Exibir resultados em uma lista otimizada (ListView/GridView) com paginação (Infinite Scroll).
+- [x] Exibir resultados em uma lista otimizada (ListView/GridView) com paginação (Infinite Scroll).
 
 ### 📸 Épico 3: O Olho do Oráculo (Scanner de Cartas)
 - [ ] Configurar pacote `camera` e permissões de dispositivo nativo.
