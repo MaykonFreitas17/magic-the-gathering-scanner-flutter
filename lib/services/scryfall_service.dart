@@ -2,56 +2,52 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/magic_card.dart';
 
+class ScryfallResponse {
+  final int totalCards;
+  final bool hasMore; // Importante para o scroll saber quando parar
+  final List<MagicCard> cards;
+
+  ScryfallResponse({
+    required this.totalCards,
+    required this.hasMore,
+    required this.cards,
+  });
+}
+
 class ScryfallService {
-  // A URL base da API da Scryfall
   static const String _baseUrl = 'https://api.scryfall.com';
 
-  Future<List<MagicCard>> getFeedCards() async {
-    // O Uri.https monta a URL perfeitamente e codifica os espaços sozinho
-    final url = Uri.https('api.scryfall.com', '/cards/search', {
-      'q': 'f:pioneer order:released',
-    });
+  // Aceitamos o parâmetro 'page' para a paginação
+  Future<ScryfallResponse?> getCards({int page = 1}) async {
+    final String urlString =
+        '$_baseUrl/cards/search?q=game:paper&order=name&page=$page';
+    final url = Uri.parse(urlString);
 
     try {
-      print('🔍 Buscando na URL: $url'); // Vamos ver a URL exata
-
       final response = await http.get(
         url,
-        headers: {
-          'User-Agent': 'SolLens/1.0', // Nome do nosso app
-          'Accept':
-              'application/json', // Dizemos que queremos a resposta em JSON
-        },
+        headers: {'User-Agent': 'SolLens/1.0', 'Accept': 'application/json'},
       );
-
-      print(
-        '📡 Status da Resposta: ${response.statusCode}',
-      ); // Tem que ser 200!
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
 
-        // Colocamos uma interrogação caso a chave 'data' não exista
+        final int total = data['total_cards'] ?? 0;
+        final bool more =
+            data['has_more'] ?? false; // A API diz se existe a pág 2, 3...
         final List<dynamic>? cardsJson = data['data'];
 
-        if (cardsJson == null) {
-          print('⚠️ A API não retornou o array "data"');
-          return [];
-        }
+        if (cardsJson == null) return null;
 
-        print(
-          '✅ Encontrou ${cardsJson.length} cartas. Transformando em Models...',
-        );
+        final cards = cardsJson
+            .map((json) => MagicCard.fromJson(json))
+            .toList();
 
-        return cardsJson.map((json) => MagicCard.fromJson(json)).toList();
-      } else {
-        print('❌ Erro da API Scryfall: ${response.body}');
-        return [];
+        return ScryfallResponse(totalCards: total, hasMore: more, cards: cards);
       }
+      return null;
     } catch (e) {
-      // Se der erro de conversão do JSON ou falta de internet, ele grita aqui:
-      print('🔥 Erro Crítico no Service: $e');
-      return [];
+      return null;
     }
   }
 }
