@@ -13,7 +13,6 @@ class _HomeViewState extends State<HomeView> {
   final ScryfallService _apiService = ScryfallService();
   final ScrollController _scrollController = ScrollController();
 
-  // Estado da nossa lista
   final List<MagicCard> _cards = [];
   int _currentPage = 1;
   int _totalCards = 0;
@@ -23,11 +22,9 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    _fetchNextPage(); // Carrega a primeira página (175 cartas)
+    _fetchNextPage();
 
-    // Ouvinte do scroll
     _scrollController.addListener(() {
-      // Se chegamos a 90% do fim da página e não estamos carregando nada...
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent * 0.9) {
         if (!_isLoading && _hasMore) {
@@ -37,7 +34,6 @@ class _HomeViewState extends State<HomeView> {
     });
   }
 
-  // Função que busca dados e "anexa" à lista atual
   Future<void> _fetchNextPage() async {
     setState(() => _isLoading = true);
 
@@ -45,12 +41,10 @@ class _HomeViewState extends State<HomeView> {
 
     if (response != null) {
       setState(() {
-        _cards.addAll(
-          response.cards,
-        ); // Adiciona as novas cartas no fim da lista
+        _cards.addAll(response.cards);
         _totalCards = response.totalCards;
         _hasMore = response.hasMore;
-        _currentPage++; // Prepara a próxima página
+        _currentPage++;
         _isLoading = false;
       });
     } else {
@@ -60,7 +54,7 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   void dispose() {
-    _scrollController.dispose(); // Limpeza de memória
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -68,7 +62,6 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Cabeçalho com o total
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Row(
@@ -86,32 +79,29 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
 
-        // Grid de Cartas
         Expanded(
           child: _cards.isEmpty && _isLoading
               ? const Center(
                   child: CircularProgressIndicator(color: Colors.orange),
                 )
               : GridView.builder(
-                  controller: _scrollController, // Link com o sensor
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(12.0),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
-                    mainAxisSpacing: 24,
-                    childAspectRatio: 0.50,
+                    mainAxisSpacing: 16, // Reduzido de 24
+                    childAspectRatio:
+                        0.65, // Aumentado de 0.50 para a proporção real da carta
                   ),
                   itemCount: _cards.length + (_hasMore ? 1 : 0),
                   itemBuilder: (context, index) {
-                    // Se for o último item e ainda tiver mais, mostra um loading no fim da grade
                     if (index == _cards.length) {
                       return const Center(
                         child: CircularProgressIndicator(color: Colors.orange),
                       );
                     }
-
-                    final card = _cards[index];
-                    return _buildCardItem(card);
+                    return _buildCardItem(_cards[index]);
                   },
                 ),
         ),
@@ -129,21 +119,25 @@ class _HomeViewState extends State<HomeView> {
             child: card.imageUrl.isNotEmpty
                 ? Image.network(
                     card.imageUrl,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.contain, // Contain manterá a carta inteira
                     width: double.infinity,
                   )
                 : Container(
                     color: Colors.grey[900],
-                    child: const Icon(Icons.image_not_supported),
+                    width: double.infinity,
+                    child: const Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey,
+                    ),
                   ),
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 6),
         Text(
           card.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
         ),
         Text(
           card.setName,

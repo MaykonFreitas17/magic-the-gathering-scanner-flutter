@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart'; // Para o debugPrint
 import '../models/magic_card.dart';
 
 class ScryfallResponse {
   final int totalCards;
-  final bool hasMore; // Importante para o scroll saber quando parar
+  final bool hasMore;
   final List<MagicCard> cards;
 
   ScryfallResponse({
@@ -17,7 +18,6 @@ class ScryfallResponse {
 class ScryfallService {
   static const String _baseUrl = 'https://api.scryfall.com';
 
-  // Aceitamos o parâmetro 'page' para a paginação
   Future<ScryfallResponse?> getCards({int page = 1}) async {
     final String urlString =
         '$_baseUrl/cards/search?q=game:paper&order=name&page=$page';
@@ -33,8 +33,7 @@ class ScryfallService {
         final Map<String, dynamic> data = json.decode(response.body);
 
         final int total = data['total_cards'] ?? 0;
-        final bool more =
-            data['has_more'] ?? false; // A API diz se existe a pág 2, 3...
+        final bool more = data['has_more'] ?? false;
         final List<dynamic>? cardsJson = data['data'];
 
         if (cardsJson == null) return null;
@@ -46,7 +45,9 @@ class ScryfallService {
         return ScryfallResponse(totalCards: total, hasMore: more, cards: cards);
       }
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // O 'stackTrace' mostra exatamente a linha do arquivo que gerou o erro!
+      debugPrint('🔥 Erro Crítico no Service: $e\n$stackTrace');
       return null;
     }
   }
