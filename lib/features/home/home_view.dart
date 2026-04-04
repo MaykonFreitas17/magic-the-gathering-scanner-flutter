@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/magic_card.dart';
+import '../../models/mtg_set.dart';
 import '../../services/scryfall_service.dart';
 import '../details/card_detail_view.dart';
+import '../search/filters_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -20,10 +22,14 @@ class _HomeViewState extends State<HomeView> {
   bool _isLoading = false;
   bool _hasMore = true;
 
+  // Lista que vai guardar as coleções no fundo
+  List<MtgSet> _availableSets = [];
+
   @override
   void initState() {
     super.initState();
     _fetchNextPage();
+    _loadSetsInBackground();
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -33,6 +39,15 @@ class _HomeViewState extends State<HomeView> {
         }
       }
     });
+  }
+
+  Future<void> _loadSetsInBackground() async {
+    final sets = await _apiService.getSets();
+    if (sets != null && mounted) {
+      setState(() {
+        _availableSets = sets;
+      });
+    }
   }
 
   Future<void> _fetchNextPage() async {
@@ -68,13 +83,50 @@ class _HomeViewState extends State<HomeView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Grimório Completo',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Grimório Completo',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '$_totalCards cartas',
+                    style: const TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                ],
               ),
-              Text(
-                '$_totalCards cartas',
-                style: const TextStyle(color: Colors.orange),
+              IconButton(
+                icon: const Icon(Icons.tune, color: Colors.white),
+                onPressed: () async {
+                  if (_availableSets.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Carregando filtros, tente novamente em um segundo...',
+                        ),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final filters = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          FiltersView(availableSets: _availableSets),
+                    ),
+                  );
+
+                  if (filters != null) {
+                    debugPrint("Filtros escolhidos: $filters");
+                  }
+                },
               ),
             ],
           ),
@@ -91,9 +143,8 @@ class _HomeViewState extends State<HomeView> {
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
-                    mainAxisSpacing: 16, // Reduzido de 24
-                    childAspectRatio:
-                        0.65, // Aumentado de 0.50 para a proporção real da carta
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.65,
                   ),
                   itemCount: _cards.length + (_hasMore ? 1 : 0),
                   itemBuilder: (context, index) {

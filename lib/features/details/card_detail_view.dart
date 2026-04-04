@@ -2,6 +2,7 @@ import '../../models/magic_card.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mana_icons_flutter/mana_icons_flutter.dart'; // NOVO IMPORT!
 
 class CardDetailView extends StatelessWidget {
   final MagicCard card;
@@ -46,7 +47,7 @@ class CardDetailView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 2. Nome e Custo de Mana (Convertido em Ícones)
+            // 2. Nome e Custo de Mana (Convertido em Ícones Oficiais)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +81,6 @@ class CardDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Exibe Poder/Resistência se for criatura
                 if (card.power != null && card.toughness != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -147,7 +147,7 @@ class CardDetailView extends StatelessWidget {
 
             const Divider(color: Colors.white24, height: 32),
 
-            // 6. Preços (Agora com cotação ao vivo)
+            // 6. Preços
             const Text(
               'Mercado (Scryfall)',
               style: TextStyle(
@@ -173,22 +173,20 @@ class CardDetailView extends StatelessWidget {
             const SizedBox(height: 12),
             _buildLegalitiesSection(card.legalities),
 
-            const SizedBox(height: 40), // Espaço no final da tela
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  // --- WIDGETS AUXILIARES (COMPONETIZAÇÃO) ---
+  // --- WIDGETS AUXILIARES ---
 
-  // Lógica para transformar a string "{2}{G}{U}" em bolinhas coloridas
   Widget _buildManaDisplay(String? manaString) {
     if (manaString == null || manaString.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Expressão regular para pegar tudo que está entre chaves {}
     final matches = RegExp(r'\{([^}]+)\}').allMatches(manaString);
 
     return Wrap(
@@ -200,45 +198,112 @@ class CardDetailView extends StatelessWidget {
     );
   }
 
-  // Desenha cada bolinha de mana com as cores do Magic
+  // AGORA COM OS ÍCONES OFICIAIS!
   Widget _buildSingleManaIcon(String symbol) {
-    Color bgColor = Colors.grey[400]!;
-    Color textColor = Colors.black;
+    IconData? iconData;
+    Color? iconColor;
 
-    // Tabela de cores padrão do MTG
+    // Tabela de mapeamento para as constantes do pacote mana_icons_flutter
     switch (symbol) {
       case 'W':
-        bgColor = const Color(0xFFF8E7B9);
-        break; // Branco
+        iconData = ManaIcons.ms_w;
+        iconColor = const Color(0xFFF8E7B9);
+        break;
       case 'U':
-        bgColor = const Color(0xFF0E68AB);
-        textColor = Colors.white;
-        break; // Azul
+        iconData = ManaIcons.ms_u;
+        iconColor = const Color(0xFF0E68AB);
+        break;
       case 'B':
-        bgColor = const Color(0xFF150B00);
-        textColor = Colors.white;
-        break; // Preto
+        iconData = ManaIcons.ms_b;
+        iconColor = const Color(0xFF150B00);
+        break;
       case 'R':
-        bgColor = const Color(0xFFD3202A);
-        textColor = Colors.white;
-        break; // Vermelho
+        iconData = ManaIcons.ms_r;
+        iconColor = const Color(0xFFD3202A);
+        break;
       case 'G':
-        bgColor = const Color(0xFF00733E);
-        textColor = Colors.white;
-        break; // Verde
+        iconData = ManaIcons.ms_g;
+        iconColor = const Color(0xFF00733E);
+        break;
       case 'C':
-        bgColor = const Color(0xFFCCCCCC);
-        break; // Incolor específico
+        iconData = ManaIcons.ms_c;
+        iconColor = const Color(0xFFCCCCCC);
+        break;
+      case 'X':
+        iconData = ManaIcons.ms_x;
+        iconColor = Colors.grey[400];
+        break;
+      case '0':
+        iconData = ManaIcons.ms_0;
+        iconColor = Colors.grey[400];
+        break;
+      case '1':
+        iconData = ManaIcons.ms_1;
+        iconColor = Colors.grey[400];
+        break;
+      case '2':
+        iconData = ManaIcons.ms_2;
+        iconColor = Colors.grey[400];
+        break;
+      case '3':
+        iconData = ManaIcons.ms_3;
+        iconColor = Colors.grey[400];
+        break;
+      case '4':
+        iconData = ManaIcons.ms_4;
+        iconColor = Colors.grey[400];
+        break;
+      case '5':
+        iconData = ManaIcons.ms_5;
+        iconColor = Colors.grey[400];
+        break;
+      case '6':
+        iconData = ManaIcons.ms_6;
+        iconColor = Colors.grey[400];
+        break;
+      case '7':
+        iconData = ManaIcons.ms_7;
+        iconColor = Colors.grey[400];
+        break;
+      case '8':
+        iconData = ManaIcons.ms_8;
+        iconColor = Colors.grey[400];
+        break;
+      case '9':
+        iconData = ManaIcons.ms_9;
+        iconColor = Colors.grey[400];
+        break;
+      case '10':
+        iconData = ManaIcons.ms_10;
+        iconColor = Colors.grey[400];
+        break;
     }
 
-    // Se for um símbolo híbrido (ex: G/W), aumentamos um pouco a bolinha para caber o texto
-    bool isHybrid = symbol.contains('/');
+    if (iconData != null) {
+      return Container(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black54,
+              blurRadius: 2,
+              offset: Offset(1, 1),
+            ),
+          ],
+        ),
+        // O próprio ícone já tem o formato redondo
+        child: Icon(iconData, color: iconColor, size: 22),
+      );
+    }
 
+    // Fallback: Se for um símbolo que não mapeamos (como híbridos ex: G/W)
+    // Mantemos o quadradinho ou bolinha em texto
+    bool isHybrid = symbol.contains('/');
     return Container(
       width: isHybrid ? 30 : 22,
       height: 22,
       decoration: BoxDecoration(
-        color: bgColor,
+        color: Colors.grey[400],
         shape: isHybrid ? BoxShape.rectangle : BoxShape.circle,
         borderRadius: isHybrid ? BorderRadius.circular(11) : null,
         boxShadow: const [
@@ -249,7 +314,7 @@ class CardDetailView extends StatelessWidget {
         child: Text(
           symbol,
           style: TextStyle(
-            color: textColor,
+            color: Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: isHybrid ? 10 : 12,
           ),
@@ -258,7 +323,6 @@ class CardDetailView extends StatelessWidget {
     );
   }
 
-  // Busca a cotação do Dólar na AwesomeAPI
   Future<double> _fetchCotacaoDolar() async {
     try {
       final response = await http.get(
@@ -271,10 +335,9 @@ class CardDetailView extends StatelessWidget {
     } catch (e) {
       debugPrint('Erro ao buscar cotação: $e');
     }
-    return 5.00; // Valor de fallback caso falhe a internet
+    return 5.00;
   }
 
-  // Renderiza a caixa de preços usando FutureBuilder
   Widget _buildPricesSection(Prices? prices) {
     if (prices == null) {
       return const Text(
@@ -313,7 +376,6 @@ class CardDetailView extends StatelessWidget {
     );
   }
 
-  // Card individual de Preço (Real em destaque)
   Widget _priceCard(
     String title,
     String? usdPrice,
@@ -368,22 +430,16 @@ class CardDetailView extends StatelessWidget {
     );
   }
 
-  // Converte USD para BRL e formata no padrão brasileiro
   String _convertToBrl(String? usdPrice, double cotacaoAtual) {
     if (usdPrice == null || usdPrice.isEmpty) return 'R\$ ---';
-
     final double? usd = double.tryParse(usdPrice);
     if (usd == null) return 'R\$ ---';
-
     final double brl = usd * cotacaoAtual;
-
     return 'R\$ ${brl.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
-  // Renderiza as "Pílulas" de legalidade dos formatos principais
   Widget _buildLegalitiesSection(Legalities? legals) {
     if (legals == null) return const SizedBox.shrink();
-
     return Wrap(
       spacing: 8,
       runSpacing: 8,
