@@ -1,20 +1,61 @@
-import '../../models/magic_card.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mana_icons_flutter/mana_icons_flutter.dart'; // NOVO IMPORT!
+import 'package:mana_icons_flutter/mana_icons_flutter.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
+import '../../models/magic_card.dart';
+import '../../services/gemini_service.dart';
 
-class CardDetailView extends StatelessWidget {
+class CardDetailView extends StatefulWidget {
   final MagicCard card;
 
   const CardDetailView({super.key, required this.card});
+
+  @override
+  State<CardDetailView> createState() => _CardDetailViewState();
+}
+
+class _CardDetailViewState extends State<CardDetailView> {
+  bool _isPortuguese = false;
+  bool _isLoadingTranslation = false;
+  String? _translationResult;
+  late final GeminiService _geminiService;
+
+  @override
+  void initState() {
+    super.initState();
+    _geminiService = GeminiService();
+    _geminiService.initialize();
+  }
+
+  Future<void> _toggleLanguage(bool toPortuguese) async {
+    if (_isPortuguese == toPortuguese) return;
+
+    setState(() {
+      _isPortuguese = toPortuguese;
+    });
+
+    if (toPortuguese && _translationResult == null) {
+      setState(() => _isLoadingTranslation = true);
+
+      final result = await _geminiService.explainCard(widget.card);
+
+      if (mounted) {
+        setState(() {
+          _translationResult = result;
+          _isLoadingTranslation = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: Text(card.name),
+        title: Text(widget.card.name),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -27,9 +68,9 @@ class CardDetailView extends StatelessWidget {
             Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16.0),
-                child: card.imageUrl.isNotEmpty
+                child: widget.card.imageUrl.isNotEmpty
                     ? Image.network(
-                        card.imageUrl,
+                        widget.card.imageUrl,
                         height: 380,
                         fit: BoxFit.contain,
                       )
@@ -47,14 +88,14 @@ class CardDetailView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 2. Nome e Custo de Mana (Convertido em Ícones Oficiais)
+            // 2. Nome e Custo de Mana
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
-                    card.name,
+                    widget.card.name,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -62,7 +103,7 @@ class CardDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-                _buildManaDisplay(card.manaCost),
+                _buildManaDisplay(widget.card.manaCost),
               ],
             ),
             const SizedBox(height: 8),
@@ -73,7 +114,7 @@ class CardDetailView extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    card.typeLine,
+                    widget.card.typeLine,
                     style: const TextStyle(
                       fontSize: 16,
                       fontStyle: FontStyle.italic,
@@ -81,7 +122,7 @@ class CardDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (card.power != null && card.toughness != null)
+                if (widget.card.power != null && widget.card.toughness != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -92,7 +133,7 @@ class CardDetailView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${card.power} / ${card.toughness}',
+                      '${widget.card.power} / ${widget.card.toughness}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -104,50 +145,18 @@ class CardDetailView extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${card.setName} (${card.setCode.toUpperCase()}) • ${card.rarity.toUpperCase()}',
+              '${widget.card.setName} (${widget.card.setCode.toUpperCase()}) • ${widget.card.rarity.toUpperCase()}',
               style: const TextStyle(fontSize: 12, color: Colors.orangeAccent),
             ),
 
             const Divider(color: Colors.white24, height: 32),
 
-            // 4. Oracle Text
-            if (card.oracleText != null && card.oracleText!.isNotEmpty) ...[
-              const Text(
-                'Regras (Oracle Text)',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                card.oracleText!,
-                style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // 5. Flavor Text
-            if (card.flavorText != null && card.flavorText!.isNotEmpty) ...[
-              Text(
-                card.flavorText!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+            // 4. SEÇÃO DO ORÁCULO
+            _buildOracleSection(),
 
             const Divider(color: Colors.white24, height: 32),
 
-            // 6. Preços
+            // 5. Preços
             const Text(
               'Mercado (Scryfall)',
               style: TextStyle(
@@ -157,11 +166,10 @@ class CardDetailView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _buildPricesSection(card.prices),
-
+            _buildPricesSection(widget.card.prices),
             const SizedBox(height: 24),
 
-            // 7. Legalidade nos Formatos
+            // 6. Legalidade nos Formatos
             const Text(
               'Formatos Válidos',
               style: TextStyle(
@@ -171,7 +179,7 @@ class CardDetailView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _buildLegalitiesSection(card.legalities),
+            _buildLegalitiesSection(widget.card.legalities),
 
             const SizedBox(height: 40),
           ],
@@ -180,146 +188,147 @@ class CardDetailView extends StatelessWidget {
     );
   }
 
-  // --- WIDGETS AUXILIARES ---
+  Widget _buildOracleSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'O Oráculo',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  _languageButton('EN', !_isPortuguese),
+                  _languageButton('PT-BR ✨', _isPortuguese),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        if (!_isPortuguese) ...[
+          if (widget.card.oracleText != null &&
+              widget.card.oracleText!.isNotEmpty)
+            MarkdownBody(
+              data: widget.card.oracleText!,
+              inlineSyntaxes: [ManaSyntax()],
+              builders: {'mana': ManaBuilder()},
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                  color: Colors.white70,
+                ),
+              ),
+            )
+          else
+            const Text(
+              'Sem texto de regras.',
+              style: TextStyle(color: Colors.grey),
+            ),
+
+          if (widget.card.flavorText != null &&
+              widget.card.flavorText!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              widget.card.flavorText!,
+              style: const TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ] else ...[
+          if (_isLoadingTranslation)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24.0),
+              child: Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(color: Colors.orange),
+                    SizedBox(height: 16),
+                    Text(
+                      'Consultando o mestre...',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_translationResult != null)
+            MarkdownBody(
+              data: _translationResult!,
+              inlineSyntaxes: [ManaSyntax()],
+              builders: {'mana': ManaBuilder()},
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                  color: Colors.white70,
+                ),
+                h3: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                  height: 2,
+                ),
+                strong: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _languageButton(String text, bool isSelected) {
+    return GestureDetector(
+      onTap: () => _toggleLanguage(text.contains('PT')),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orange : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white54,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildManaDisplay(String? manaString) {
     if (manaString == null || manaString.isEmpty) {
       return const SizedBox.shrink();
     }
-
     final matches = RegExp(r'\{([^}]+)\}').allMatches(manaString);
-
     return Wrap(
       spacing: 4,
       children: matches.map((match) {
         final symbol = match.group(1) ?? '';
-        return _buildSingleManaIcon(symbol);
+        return ManaIconHelper.getIconWidget(symbol, size: 22);
       }).toList(),
-    );
-  }
-
-  // AGORA COM OS ÍCONES OFICIAIS!
-  Widget _buildSingleManaIcon(String symbol) {
-    IconData? iconData;
-    Color? iconColor;
-
-    // Tabela de mapeamento para as constantes do pacote mana_icons_flutter
-    switch (symbol) {
-      case 'W':
-        iconData = ManaIcons.ms_w;
-        iconColor = const Color(0xFFF8E7B9);
-        break;
-      case 'U':
-        iconData = ManaIcons.ms_u;
-        iconColor = const Color(0xFF0E68AB);
-        break;
-      case 'B':
-        iconData = ManaIcons.ms_b;
-        iconColor = const Color(0xFF150B00);
-        break;
-      case 'R':
-        iconData = ManaIcons.ms_r;
-        iconColor = const Color(0xFFD3202A);
-        break;
-      case 'G':
-        iconData = ManaIcons.ms_g;
-        iconColor = const Color(0xFF00733E);
-        break;
-      case 'C':
-        iconData = ManaIcons.ms_c;
-        iconColor = const Color(0xFFCCCCCC);
-        break;
-      case 'X':
-        iconData = ManaIcons.ms_x;
-        iconColor = Colors.grey[400];
-        break;
-      case '0':
-        iconData = ManaIcons.ms_0;
-        iconColor = Colors.grey[400];
-        break;
-      case '1':
-        iconData = ManaIcons.ms_1;
-        iconColor = Colors.grey[400];
-        break;
-      case '2':
-        iconData = ManaIcons.ms_2;
-        iconColor = Colors.grey[400];
-        break;
-      case '3':
-        iconData = ManaIcons.ms_3;
-        iconColor = Colors.grey[400];
-        break;
-      case '4':
-        iconData = ManaIcons.ms_4;
-        iconColor = Colors.grey[400];
-        break;
-      case '5':
-        iconData = ManaIcons.ms_5;
-        iconColor = Colors.grey[400];
-        break;
-      case '6':
-        iconData = ManaIcons.ms_6;
-        iconColor = Colors.grey[400];
-        break;
-      case '7':
-        iconData = ManaIcons.ms_7;
-        iconColor = Colors.grey[400];
-        break;
-      case '8':
-        iconData = ManaIcons.ms_8;
-        iconColor = Colors.grey[400];
-        break;
-      case '9':
-        iconData = ManaIcons.ms_9;
-        iconColor = Colors.grey[400];
-        break;
-      case '10':
-        iconData = ManaIcons.ms_10;
-        iconColor = Colors.grey[400];
-        break;
-    }
-
-    if (iconData != null) {
-      return Container(
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black54,
-              blurRadius: 2,
-              offset: Offset(1, 1),
-            ),
-          ],
-        ),
-        // O próprio ícone já tem o formato redondo
-        child: Icon(iconData, color: iconColor, size: 22),
-      );
-    }
-
-    // Fallback: Se for um símbolo que não mapeamos (como híbridos ex: G/W)
-    // Mantemos o quadradinho ou bolinha em texto
-    bool isHybrid = symbol.contains('/');
-    return Container(
-      width: isHybrid ? 30 : 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: Colors.grey[400],
-        shape: isHybrid ? BoxShape.rectangle : BoxShape.circle,
-        borderRadius: isHybrid ? BorderRadius.circular(11) : null,
-        boxShadow: const [
-          BoxShadow(color: Colors.black54, blurRadius: 2, offset: Offset(1, 1)),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          symbol,
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: isHybrid ? 10 : 12,
-          ),
-        ),
-      ),
     );
   }
 
@@ -345,14 +354,12 @@ class CardDetailView extends StatelessWidget {
         style: TextStyle(color: Colors.grey),
       );
     }
-
     return FutureBuilder<double>(
       future: _fetchCotacaoDolar(),
       builder: (context, snapshot) {
         final bool isLoading =
             snapshot.connectionState == ConnectionState.waiting;
         final double cotacaoAtual = snapshot.data ?? 5.00;
-
         return Row(
           children: [
             _priceCard(
@@ -385,7 +392,6 @@ class CardDetailView extends StatelessWidget {
   ) {
     final String brlValue = _convertToBrl(usdPrice, cotacao);
     final String usdValue = usdPrice != null ? '\$ $usdPrice' : '---';
-
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -456,10 +462,8 @@ class CardDetailView extends StatelessWidget {
   Widget _legalityBadge(String format, String status) {
     bool isLegal = status == 'legal';
     bool isBanned = status == 'banned';
-
     Color bgColor = Colors.grey[800]!;
     Color textColor = Colors.grey;
-
     if (isLegal) {
       bgColor = Colors.green.withValues(alpha: 0.2);
       textColor = Colors.greenAccent;
@@ -467,7 +471,6 @@ class CardDetailView extends StatelessWidget {
       bgColor = Colors.red.withValues(alpha: 0.2);
       textColor = Colors.redAccent;
     }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -483,6 +486,174 @@ class CardDetailView extends StatelessWidget {
           fontSize: 12,
         ),
       ),
+    );
+  }
+}
+
+// ==============================================================================
+// --- CLASSES AUXILIARES PARA EXTENDER O MARKDOWN ---
+// ==============================================================================
+
+class ManaIconHelper {
+  static Widget getIconWidget(String symbol, {double size = 16}) {
+    IconData? iconData;
+    Color? iconColor;
+
+    final s = symbol.toUpperCase();
+
+    switch (s) {
+      case 'W':
+        iconData = ManaIcons.ms_w;
+        iconColor = const Color(0xFFF8E7B9);
+        break;
+      case 'U':
+        iconData = ManaIcons.ms_u;
+        iconColor = const Color(0xFF0E68AB);
+        break;
+      case 'B':
+        iconData = ManaIcons.ms_b;
+        iconColor = const Color(0xFF150B00);
+        break;
+      case 'R':
+        iconData = ManaIcons.ms_r;
+        iconColor = const Color(0xFFD3202A);
+        break;
+      case 'G':
+        iconData = ManaIcons.ms_g;
+        iconColor = const Color(0xFF00733E);
+        break;
+      case 'C':
+        iconData = ManaIcons.ms_c;
+        iconColor = const Color(0xFFCCCCCC);
+        break;
+      case 'X':
+        iconData = ManaIcons.ms_x;
+        iconColor = Colors.grey[400];
+        break;
+      case 'T':
+        iconData = ManaIcons.ms_tap;
+        iconColor = Colors.grey[400];
+        break;
+      case '0':
+        iconData = ManaIcons.ms_0;
+        iconColor = Colors.grey[400];
+        break;
+      case '1':
+        iconData = ManaIcons.ms_1;
+        iconColor = Colors.grey[400];
+        break;
+      case '2':
+        iconData = ManaIcons.ms_2;
+        iconColor = Colors.grey[400];
+        break;
+      case '3':
+        iconData = ManaIcons.ms_3;
+        iconColor = Colors.grey[400];
+        break;
+      case '4':
+        iconData = ManaIcons.ms_4;
+        iconColor = Colors.grey[400];
+        break;
+      case '5':
+        iconData = ManaIcons.ms_5;
+        iconColor = Colors.grey[400];
+        break;
+      case '6':
+        iconData = ManaIcons.ms_6;
+        iconColor = Colors.grey[400];
+        break;
+      case '7':
+        iconData = ManaIcons.ms_7;
+        iconColor = Colors.grey[400];
+        break;
+      case '8':
+        iconData = ManaIcons.ms_8;
+        iconColor = Colors.grey[400];
+        break;
+      case '9':
+        iconData = ManaIcons.ms_9;
+        iconColor = Colors.grey[400];
+        break;
+      case '10':
+        iconData = ManaIcons.ms_10;
+        iconColor = Colors.grey[400];
+        break;
+      default:
+        if (RegExp(r'^\d+$').hasMatch(s)) {
+          iconData = IconData(
+            0xe900 + int.parse(s),
+            fontFamily: ManaIcons.ms_0.fontFamily,
+          );
+          iconColor = Colors.grey[400];
+        }
+    }
+
+    if (iconData != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1),
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black54,
+              blurRadius: 1,
+              offset: Offset(1, 1),
+            ),
+          ],
+        ),
+        child: Icon(iconData, color: iconColor, size: size),
+      );
+    }
+
+    bool isHybrid = s.contains('/');
+    return Container(
+      width: isHybrid ? size * 1.4 : size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFFCCCCCC),
+        shape: isHybrid ? BoxShape.rectangle : BoxShape.circle,
+        borderRadius: isHybrid ? BorderRadius.circular(size / 2) : null,
+        border: Border.all(color: Colors.black45, width: 0.5),
+      ),
+      child: Center(
+        child: Text(
+          s,
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.6,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ManaSyntax extends md.InlineSyntax {
+  ManaSyntax() : super(r'\{([^{}]+)\}');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final symbol = match.group(1);
+
+    final element = md.Element.empty('mana');
+    element.attributes['symbol'] = symbol!;
+
+    parser.addNode(element);
+    return true;
+  }
+}
+
+class ManaBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final symbol = element.attributes['symbol'] ?? '';
+
+    return Baseline(
+      baseline: 14,
+      baselineType: TextBaseline.alphabetic,
+      child: ManaIconHelper.getIconWidget(symbol, size: 16),
     );
   }
 }
