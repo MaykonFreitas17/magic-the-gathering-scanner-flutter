@@ -279,7 +279,7 @@ class _FiltersViewState extends State<FiltersView> {
 
             _buildSectionTitle('Formato Válido'),
             DropdownButtonFormField<String>(
-              value: _selectedFormat,
+              initialValue: _selectedFormat,
               dropdownColor: Colors.grey[900],
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
