@@ -22,8 +22,20 @@ class _HomeViewState extends State<HomeView> {
   bool _isLoading = false;
   bool _hasMore = true;
 
-  // Lista que vai guardar as coleções no fundo
   List<MtgSet> _availableSets = [];
+  Map<String, dynamic> _currentFilters = {};
+
+  bool get _hasActiveFilters {
+    if (_currentFilters.isEmpty) return false;
+
+    return (_currentFilters['name']?.toString().isNotEmpty ?? false) ||
+        (_currentFilters['oracle']?.toString().isNotEmpty ?? false) ||
+        ((_currentFilters['sets'] as List?)?.isNotEmpty ?? false) ||
+        (_currentFilters['format']?.toString().isNotEmpty ?? false) ||
+        ((_currentFilters['types'] as List?)?.isNotEmpty ?? false) ||
+        ((_currentFilters['keywords'] as List?)?.isNotEmpty ?? false) ||
+        ((_currentFilters['colors'] as List?)?.isNotEmpty ?? false);
+  }
 
   @override
   void initState() {
@@ -53,7 +65,16 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _fetchNextPage() async {
     setState(() => _isLoading = true);
 
-    final response = await _apiService.getCards(page: _currentPage);
+    final response = await _apiService.getCards(
+      page: _currentPage,
+      name: _currentFilters['name'],
+      oracle: _currentFilters['oracle'],
+      sets: _currentFilters['sets'],
+      format: _currentFilters['format'],
+      colors: _currentFilters['colors'],
+      types: _currentFilters['types'],
+      keywords: _currentFilters['keywords'],
+    );
 
     if (response != null) {
       setState(() {
@@ -100,33 +121,66 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ],
               ),
-              IconButton(
-                icon: const Icon(Icons.tune, color: Colors.white),
-                onPressed: () async {
-                  if (_availableSets.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Carregando filtros, tente novamente em um segundo...',
-                        ),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                    return;
-                  }
-
-                  final filters = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          FiltersView(availableSets: _availableSets),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.filter_alt_off,
+                      color: _hasActiveFilters ? Colors.orange : Colors.white38,
                     ),
-                  );
+                    tooltip: 'Limpar Filtros',
+                    onPressed: _hasActiveFilters
+                        ? () {
+                            setState(() {
+                              _currentFilters.clear();
+                              _cards.clear();
+                              _currentPage = 1;
+                              _hasMore = true;
+                            });
+                            _fetchNextPage();
+                          }
+                        : null,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.tune,
+                      color: _hasActiveFilters ? Colors.orange : Colors.white,
+                    ),
+                    onPressed: () async {
+                      if (_availableSets.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Carregando filtros, tente novamente em um segundo...',
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
 
-                  if (filters != null) {
-                    debugPrint("Filtros escolhidos: $filters");
-                  }
-                },
+                      final filters = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FiltersView(
+                            availableSets: _availableSets,
+                            initialFilters: _currentFilters,
+                          ),
+                        ),
+                      );
+
+                      if (filters != null) {
+                        setState(() {
+                          _currentFilters = filters as Map<String, dynamic>;
+                          _cards.clear();
+                          _currentPage = 1;
+                          _hasMore = true;
+                        });
+                        _fetchNextPage();
+                      }
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -178,7 +232,7 @@ class _HomeViewState extends State<HomeView> {
               child: card.imageUrl.isNotEmpty
                   ? Image.network(
                       card.imageUrl,
-                      fit: BoxFit.contain, // Contain manterá a carta inteira
+                      fit: BoxFit.contain,
                       width: double.infinity,
                     )
                   : Container(

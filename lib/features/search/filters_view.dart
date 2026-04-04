@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:mana_icons_flutter/mana_icons_flutter.dart'; // NOVO IMPORT!
+import 'package:mana_icons_flutter/mana_icons_flutter.dart';
 import '../../models/mtg_set.dart';
 import 'set_selection_view.dart';
 
 class FiltersView extends StatefulWidget {
   final List<MtgSet> availableSets;
+  final Map<String, dynamic>? initialFilters;
 
-  const FiltersView({super.key, required this.availableSets});
+  const FiltersView({
+    super.key,
+    required this.availableSets,
+    this.initialFilters,
+  });
 
   @override
   State<FiltersView> createState() => _FiltersViewState();
@@ -15,8 +20,12 @@ class FiltersView extends StatefulWidget {
 class _FiltersViewState extends State<FiltersView> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _oracleController = TextEditingController();
+
   List<String> _selectedSets = [];
   String? _selectedFormat;
+
+  final Set<String> _selectedKeywords = {};
+  final Set<String> _selectedTypes = {};
   final Set<String> _selectedColors = {};
 
   final List<String> _formats = [
@@ -28,7 +37,34 @@ class _FiltersViewState extends State<FiltersView> {
     'Pauper',
   ];
 
-  // Agora a lista aceita o IconData do pacote
+  final List<String> _types = [
+    'Artifact',
+    'Battle',
+    'Creature',
+    'Enchantment',
+    'Instant',
+    'Land',
+    'Planeswalker',
+    'Sorcery',
+  ];
+
+  final List<String> _keywords = [
+    'Flying',
+    'Haste',
+    'Trample',
+    'Deathtouch',
+    'Lifelink',
+    'Menace',
+    'First strike',
+    'Double strike',
+    'Reach',
+    'Vigilance',
+    'Flash',
+    'Defender',
+    'Hexproof',
+    'Indestructible',
+  ];
+
   final List<Map<String, dynamic>> _colors = [
     {
       'code': 'W',
@@ -69,6 +105,36 @@ class _FiltersViewState extends State<FiltersView> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    if (widget.initialFilters != null) {
+      _nameController.text = widget.initialFilters!['name'] ?? '';
+      _oracleController.text = widget.initialFilters!['oracle'] ?? '';
+      _selectedFormat = widget.initialFilters!['format'];
+
+      if (widget.initialFilters!['sets'] != null) {
+        _selectedSets = List<String>.from(widget.initialFilters!['sets']);
+      }
+      if (widget.initialFilters!['colors'] != null) {
+        _selectedColors.addAll(
+          List<String>.from(widget.initialFilters!['colors']),
+        );
+      }
+      if (widget.initialFilters!['keywords'] != null) {
+        _selectedKeywords.addAll(
+          List<String>.from(widget.initialFilters!['keywords']),
+        );
+      }
+      if (widget.initialFilters!['types'] != null) {
+        _selectedTypes.addAll(
+          List<String>.from(widget.initialFilters!['types']),
+        );
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _oracleController.dispose();
@@ -82,6 +148,8 @@ class _FiltersViewState extends State<FiltersView> {
       _selectedSets.clear();
       _selectedFormat = null;
       _selectedColors.clear();
+      _selectedKeywords.clear();
+      _selectedTypes.clear();
     });
   }
 
@@ -117,6 +185,64 @@ class _FiltersViewState extends State<FiltersView> {
             _buildTextField(_oracleController, 'Ex: draw a card, flying...'),
             const SizedBox(height: 24),
 
+            _buildSectionTitle('Tipos de Carta'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _types.map((type) {
+                final isSelected = _selectedTypes.contains(type.toLowerCase());
+                return FilterChip(
+                  label: Text(
+                    type,
+                    style: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white,
+                    ),
+                  ),
+                  selected: isSelected,
+                  selectedColor: Colors.orange,
+                  backgroundColor: Colors.grey[850],
+                  showCheckmark: false,
+                  onSelected: (selected) {
+                    setState(() {
+                      selected
+                          ? _selectedTypes.add(type.toLowerCase())
+                          : _selectedTypes.remove(type.toLowerCase());
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('Habilidades (Keywords)'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _keywords.map((kw) {
+                final isSelected = _selectedKeywords.contains(kw.toLowerCase());
+                return FilterChip(
+                  label: Text(
+                    kw,
+                    style: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white,
+                    ),
+                  ),
+                  selected: isSelected,
+                  selectedColor: Colors.orangeAccent,
+                  backgroundColor: Colors.grey[850],
+                  showCheckmark: false,
+                  onSelected: (selected) {
+                    setState(() {
+                      selected
+                          ? _selectedKeywords.add(kw.toLowerCase())
+                          : _selectedKeywords.remove(kw.toLowerCase());
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
             _buildSectionTitle('Coleções'),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -143,7 +269,6 @@ class _FiltersViewState extends State<FiltersView> {
                     ),
                   ),
                 );
-
                 if (result != null) {
                   setState(() => _selectedSets = result as List<String>);
                 }
@@ -154,7 +279,7 @@ class _FiltersViewState extends State<FiltersView> {
 
             _buildSectionTitle('Formato Válido'),
             DropdownButtonFormField<String>(
-              initialValue: _selectedFormat,
+              value: _selectedFormat,
               dropdownColor: Colors.grey[900],
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
@@ -179,7 +304,6 @@ class _FiltersViewState extends State<FiltersView> {
             ),
             const SizedBox(height: 24),
 
-            // NOVO CHIP DE CORES COM O ÍCONE OFICIAL
             _buildSectionTitle('Cores'),
             Wrap(
               spacing: 12,
@@ -187,8 +311,6 @@ class _FiltersViewState extends State<FiltersView> {
               children: _colors.map((colorMap) {
                 final isSelected = _selectedColors.contains(colorMap['code']);
                 final bgColor = Color(int.parse(colorMap['color'] as String));
-
-                // Ajuste de contraste para o texto/ícone
                 final textColor =
                     (colorMap['code'] == 'W' || colorMap['code'] == 'C')
                     ? Colors.black
@@ -216,7 +338,7 @@ class _FiltersViewState extends State<FiltersView> {
                   backgroundColor: bgColor.withValues(alpha: 0.3),
                   selectedColor: bgColor,
                   selected: isSelected,
-                  showCheckmark: false, // Esconde aquele ícone padrão de check
+                  showCheckmark: false,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -252,6 +374,8 @@ class _FiltersViewState extends State<FiltersView> {
                 'oracle': _oracleController.text,
                 'sets': _selectedSets,
                 'format': _selectedFormat,
+                'types': _selectedTypes.toList(),
+                'keywords': _selectedKeywords.toList(),
                 'colors': _selectedColors.toList(),
               });
             },
