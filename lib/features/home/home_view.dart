@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/magic_card.dart';
+import '../../models/mtg_set.dart';
 import '../../services/scryfall_service.dart';
 import '../details/card_detail_view.dart';
+import '../search/filters_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -20,10 +22,26 @@ class _HomeViewState extends State<HomeView> {
   bool _isLoading = false;
   bool _hasMore = true;
 
+  List<MtgSet> _availableSets = [];
+  Map<String, dynamic> _currentFilters = {};
+
+  bool get _hasActiveFilters {
+    if (_currentFilters.isEmpty) return false;
+
+    return (_currentFilters['name']?.toString().isNotEmpty ?? false) ||
+        (_currentFilters['oracle']?.toString().isNotEmpty ?? false) ||
+        ((_currentFilters['sets'] as List?)?.isNotEmpty ?? false) ||
+        (_currentFilters['format']?.toString().isNotEmpty ?? false) ||
+        ((_currentFilters['types'] as List?)?.isNotEmpty ?? false) ||
+        ((_currentFilters['keywords'] as List?)?.isNotEmpty ?? false) ||
+        ((_currentFilters['colors'] as List?)?.isNotEmpty ?? false);
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchNextPage();
+    _loadSetsInBackground();
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -35,10 +53,28 @@ class _HomeViewState extends State<HomeView> {
     });
   }
 
+  Future<void> _loadSetsInBackground() async {
+    final sets = await _apiService.getSets();
+    if (sets != null && mounted) {
+      setState(() {
+        _availableSets = sets;
+      });
+    }
+  }
+
   Future<void> _fetchNextPage() async {
     setState(() => _isLoading = true);
 
-    final response = await _apiService.getCards(page: _currentPage);
+    final response = await _apiService.getCards(
+      page: _currentPage,
+      name: _currentFilters['name'],
+      oracle: _currentFilters['oracle'],
+      sets: _currentFilters['sets'],
+      format: _currentFilters['format'],
+      colors: _currentFilters['colors'],
+      types: _currentFilters['types'],
+      keywords: _currentFilters['keywords'],
+    );
 
     if (response != null) {
       setState(() {
@@ -68,13 +104,83 @@ class _HomeViewState extends State<HomeView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Grimório Completo',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Grimório Completo',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '$_totalCards cartas',
+                    style: const TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                ],
               ),
-              Text(
-                '$_totalCards cartas',
-                style: const TextStyle(color: Colors.orange),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.filter_alt_off,
+                      color: _hasActiveFilters ? Colors.orange : Colors.white38,
+                    ),
+                    tooltip: 'Limpar Filtros',
+                    onPressed: _hasActiveFilters
+                        ? () {
+                            setState(() {
+                              _currentFilters.clear();
+                              _cards.clear();
+                              _currentPage = 1;
+                              _hasMore = true;
+                            });
+                            _fetchNextPage();
+                          }
+                        : null,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.tune,
+                      color: _hasActiveFilters ? Colors.orange : Colors.white,
+                    ),
+                    onPressed: () async {
+                      if (_availableSets.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Carregando filtros, tente novamente em um segundo...',
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final filters = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FiltersView(
+                            availableSets: _availableSets,
+                            initialFilters: _currentFilters,
+                          ),
+                        ),
+                      );
+
+                      if (filters != null) {
+                        setState(() {
+                          _currentFilters = filters as Map<String, dynamic>;
+                          _cards.clear();
+                          _currentPage = 1;
+                          _hasMore = true;
+                        });
+                        _fetchNextPage();
+                      }
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -91,9 +197,8 @@ class _HomeViewState extends State<HomeView> {
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
-                    mainAxisSpacing: 16, // Reduzido de 24
-                    childAspectRatio:
-                        0.65, // Aumentado de 0.50 para a proporção real da carta
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.65,
                   ),
                   itemCount: _cards.length + (_hasMore ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -127,7 +232,7 @@ class _HomeViewState extends State<HomeView> {
               child: card.imageUrl.isNotEmpty
                   ? Image.network(
                       card.imageUrl,
-                      fit: BoxFit.contain, // Contain manterá a carta inteira
+                      fit: BoxFit.contain,
                       width: double.infinity,
                     )
                   : Container(
