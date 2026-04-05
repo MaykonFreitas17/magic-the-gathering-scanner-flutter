@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart';
+import 'package:mtg_scanner_flutter/features/scanner/scanner_view.dart';
 import 'core/app_theme.dart';
 
 import 'features/home/home_view.dart';
@@ -8,6 +10,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: ".env");
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(const SolLensApp());
 }
@@ -39,12 +46,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // Lista de telas para cada aba
   static const List<Widget> _widgetOptions = <Widget>[
     HomeView(),
-    Center(
-      child: Text(
-        '📸 Aba do Scanner (Sol Lens)',
-        style: TextStyle(fontSize: 24),
-      ),
-    ),
+    ScannerView(),
     Center(child: Text('🎴 Aba de Meus Decks', style: TextStyle(fontSize: 24))),
   ];
 

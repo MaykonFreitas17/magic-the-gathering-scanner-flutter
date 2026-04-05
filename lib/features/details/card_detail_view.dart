@@ -185,6 +185,16 @@ class _CardDetailViewState extends State<CardDetailView> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () =>
+            Navigator.pop(context), // Volta pra tela anterior (Scanner)
+        backgroundColor: Colors.orange,
+        icon: const Icon(Icons.document_scanner, color: Colors.black),
+        label: const Text(
+          'Escanear Outra',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 
