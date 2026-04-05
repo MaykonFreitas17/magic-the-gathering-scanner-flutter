@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -34,7 +35,7 @@ class ScryfallService {
     List<String> queryParts = ['game:paper'];
 
     if (name != null && name.isNotEmpty) {
-      queryParts.add(name);
+      queryParts.add('!"$name"');
     }
 
     if (oracle != null && oracle.isNotEmpty) {
@@ -79,10 +80,15 @@ class ScryfallService {
     final url = Uri.parse(urlString);
 
     try {
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'SolLens/1.0', 'Accept': 'application/json'},
-      );
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'User-Agent': 'SolLens/1.0',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -97,12 +103,13 @@ class ScryfallService {
           hasMore: data['has_more'] ?? false,
           cards: cards,
         );
-      } else if (response.statusCode == 404) {
-        return ScryfallResponse(totalCards: 0, hasMore: false, cards: []);
       }
+    } on TimeoutException catch (_) {
+      debugPrint('A conexão expirou. Verifique sua internet.');
     } catch (e) {
-      debugPrint('Erro cartas: $e');
+      debugPrint('Erro na requisição: $e');
     }
+
     return null;
   }
 
