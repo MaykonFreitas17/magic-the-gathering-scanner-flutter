@@ -3,24 +3,24 @@
 Um aplicativo mobile focado em utilidade para jogadores de Magic: The Gathering. Escaneie cartas físicas, consulte o Oracle text em PT-BR, entenda mecânicas instantaneamente e gerencie seus decks com análises de Inteligência Artificial.
 
 ## 📊 Status do Projeto
-**Progresso Geral:** 60%
+**Progresso Geral:** 65%
 *(Marque os checkboxes com um 'x' para acompanhar o desenvolvimento)*
 
 ---
 
 ## 🗺️ Roadmap de Desenvolvimento
 
-### 🔐 Épico 1: Fundação e Autenticação (Supabase / Firebase)
-- [ ] Configurar o projeto no Firebase/Supabase (Auth e Database).
-- [ ] Criar interface de Login e Cadastro de Usuário.
-- [ ] Implementar a lógica de sessão (manter logado).
-- [ ] Criar a estrutura base de navegação (BottomNavigationBar) com as 3 abas principais (Busca, Scanner, Meus Decks).
+### 🔐 Épico 1: Fundação e Autenticação (Firebase)
+- [ ] Configurar o projeto no Firebase (Auth e Firestore).
+- [ ] Implementar **Google Sign-In** (Login com um toque).
+- [ ] Criar a estrutura base de navegação (BottomNavigationBar) com as 3 abas principais.
+- [ ] Sincronizar banco de dados local com a nuvem.
 
 ### 🔍 Épico 2: A Taverna (Busca Manual & Filtros)
 - [x] Integrar a API da Scryfall (`http` package).
 - [x] Desenvolver a barra de pesquisa por texto (nome/descrição).
 - [x] Criar a interface de filtros avançados (Cores, Tipos, Keywords e Edições).
-- [x] Exibir resultados em uma lista otimizada com paginação (Infinite Scroll).
+- [x] Exibir resultados em uma lista otimizada com paginação.
 
 ### 📸 Épico 3: O Olho do Oráculo (Scanner de Cartas)
 - [x] Configurar pacote `camera` e permissões de dispositivo nativo.
@@ -32,15 +32,17 @@ Um aplicativo mobile focado em utilidade para jogadores de Magic: The Gathering.
 ### 📖 Épico 4: O Grimório (Detalhes da Carta & Mecânicas)
 - [x] Criar a UI da Tela de Detalhes (Imagem, Custo, Preços e Legalidade).
 - [x] Implementar Seletor de Idioma (EN / PT-BR) com tradução via IA (Gemini).
-- [x] Renderização de Símbolos de Mana dinâmicos via Markdown customizado.
-- [ ] Lógica de exibição: Ler o texto da carta e renderizar os cards explicativos de mecânicas (Dicionário Estático).
-- [ ] Adicionar botão "Adicionar ao Deck" com modal listando os decks do usuário.
+- [x] Renderização de Símbolos de Mana dinâmicos.
+- [ ] Lógica de exibição: Ler o texto da carta e renderizar os cards explicativos de mecânicas.
+- [x] Adicionar botão "Adicionar ao Deck" (Main ou Sideboard).
 
 ### 🛡️ Épico 5: Arsenal (Gerenciamento de Decks)
-- [ ] Criar a UI principal da aba "Meus Decks" (Listagem de decks).
-- [ ] Implementar o fluxo de Criação de novo Deck (Nome, Formato, Capa).
-- [ ] Desenvolver a Tela de Detalhes do Deck (Agrupamento por tipos).
-- [ ] Implementar funcionalidade de Remoção/Edição de quantidade de cartas.
+- [x] Criar a UI principal da aba "Meus Decks" (Listagem com capas dinâmicas).
+- [x] Implementar o fluxo de Criação e Edição de Decks (Nome, Formato, Capa).
+- [x] Desenvolver a Tela de Detalhes do Deck com **Agrupamento por Tipos**.
+- [x] Implementar suporte a **Sideboard** (Separação visual e lógica).
+- [x] Implementar funcionalidade de incremento/decremento de quantidades (+/-).
+- [x] Identidade de cor do Deck gerada automaticamente pelos símbolos de mana.
 
 ### 🖨️ Épico 6: Compartilhamento e Inteligência (Exportação & IA)
 - [ ] **Geração de PDF:**
@@ -49,4 +51,4 @@ Um aplicativo mobile focado em utilidade para jogadores de Magic: The Gathering.
 - [x] **O Mestre (IA):**
   - [x] Integrar a API do Gemini.
   - [x] Desenvolver o prompt do sistema para análise de cartas individuais.
-  - [ ] Renderizar a análise de Decks completos (Dicas de Mulligan, Sinergias).
+  - [ ] Renderizar a análise de Decks completos (Sinergias e Sugestões de melhoria).
