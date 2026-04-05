@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/services.dart';
+import 'package:mtg_scanner_flutter/features/decks/decks_list_view.dart';
 import 'package:mtg_scanner_flutter/features/scanner/scanner_view.dart';
 import 'core/app_theme.dart';
 
@@ -47,7 +48,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   static const List<Widget> _widgetOptions = <Widget>[
     HomeView(),
     ScannerView(),
-    Center(child: Text('🎴 Aba de Meus Decks', style: TextStyle(fontSize: 24))),
+    DecksListView(),
   ];
 
   void _onItemTapped(int index) {

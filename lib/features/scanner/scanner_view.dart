@@ -3,11 +3,22 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import '../../core/utils/legality_helper.dart';
+import '../../services/database_service.dart';
 import '../../services/scryfall_service.dart';
 import '../details/card_detail_view.dart';
 
 class ScannerView extends StatefulWidget {
-  const ScannerView({super.key});
+  final int? targetDeckId;
+  final String? deckFormat;
+  final String? targetBoard;
+
+  const ScannerView({
+    super.key,
+    this.targetDeckId,
+    this.deckFormat,
+    this.targetBoard,
+  });
 
   @override
   State<ScannerView> createState() => _ScannerViewState();
@@ -19,7 +30,7 @@ class _ScannerViewState extends State<ScannerView> {
   bool _hasPermission = false;
   bool _isProcessing = false;
 
-  // --- NOVO: Controle de Auto-Scan ---
+  // Controle de Auto-Scan
   bool _isAutoScanEnabled = false;
   Timer? _autoScanTimer;
 
@@ -65,8 +76,7 @@ class _ScannerViewState extends State<ScannerView> {
 
       _cameraController = CameraController(
         backCamera,
-        ResolutionPreset
-            .high, // High é rápido o suficiente e consome menos RAM que o Max
+        ResolutionPreset.high,
         enableAudio: false,
       );
 
@@ -80,14 +90,12 @@ class _ScannerViewState extends State<ScannerView> {
     }
   }
 
-  // --- NOVO: Lógica do Loop Automático ---
   void _toggleAutoScan(bool value) {
     setState(() {
       _isAutoScanEnabled = value;
     });
 
     if (_isAutoScanEnabled) {
-      // Dispara a cada 2.5 segundos
       _autoScanTimer = Timer.periodic(const Duration(milliseconds: 2500), (
         timer,
       ) {
@@ -100,7 +108,6 @@ class _ScannerViewState extends State<ScannerView> {
     }
   }
 
-  // Atualizamos a função para saber se foi toque manual ou automático
   Future<void> _scanCard({bool isAuto = false}) async {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return;
@@ -116,8 +123,6 @@ class _ScannerViewState extends State<ScannerView> {
       );
 
       if (recognizedText.blocks.isEmpty) {
-        // Só reclama se o usuário tiver apertado com o dedo.
-        // No automático, ele ignora silenciosamente e tenta de novo no próximo loop.
         if (!isAuto) {
           _showError('Não consegui ler. Tente melhorar a iluminação!');
         }
@@ -127,6 +132,7 @@ class _ScannerViewState extends State<ScannerView> {
       String possibleCardName = recognizedText.blocks.first.text
           .replaceAll('\n', ' ')
           .trim();
+
       debugPrint('🔍 Tentando: $possibleCardName');
 
       final response = await _apiService.getCards(name: possibleCardName);
@@ -134,8 +140,26 @@ class _ScannerViewState extends State<ScannerView> {
       if (response != null && response.cards.isNotEmpty) {
         final magicCard = response.cards.first;
 
+        if (widget.targetDeckId != null) {
+          if (LegalityHelper.isLegal(magicCard, widget.deckFormat!)) {
+            await DatabaseService.instance.addCardToDeck(
+              widget.targetDeckId!,
+              magicCard,
+              widget.deckFormat!,
+              boardType: widget.targetBoard ?? 'main', // PASSA A INFORMAÇÃO!
+            );
+            _showSuccess(
+              'Adicionada ao ${widget.targetBoard == "sideboard" ? "Sideboard" : "Main"}: ${magicCard.name}',
+            );
+          } else {
+            _showError(
+              'Esta carta não é válida no formato ${widget.deckFormat}',
+            );
+          }
+          return;
+        }
+
         if (mounted) {
-          // Achou! Pausa o timer para não ficar bipando no fundo
           _autoScanTimer?.cancel();
 
           await Navigator.push(
@@ -145,8 +169,7 @@ class _ScannerViewState extends State<ScannerView> {
             ),
           );
 
-          // Quando o usuário volta (clicando no nosso novo botão flutuante), o scanner religa!
-          if (_isAutoScanEnabled) {
+          if (mounted && _isAutoScanEnabled) {
             _toggleAutoScan(true);
           }
         }
@@ -177,9 +200,25 @@ class _ScannerViewState extends State<ScannerView> {
     );
   }
 
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.greenAccent,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _autoScanTimer?.cancel(); // Limpa o timer para não vazar memória
+    _autoScanTimer?.cancel();
     _cameraController?.dispose();
     _textRecognizer.close();
     super.dispose();
@@ -202,7 +241,6 @@ class _ScannerViewState extends State<ScannerView> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      // NOVO: A tela inteira virou um botão! Tocou na tela, ele escaneia.
       body: GestureDetector(
         onTap: () {
           if (!_isProcessing) _scanCard(isAuto: false);
@@ -211,7 +249,6 @@ class _ScannerViewState extends State<ScannerView> {
           fit: StackFit.expand,
           children: [
             CameraPreview(_cameraController!),
-
             ColorFiltered(
               colorFilter: ColorFilter.mode(
                 Colors.black.withValues(alpha: 0.7),
@@ -240,7 +277,6 @@ class _ScannerViewState extends State<ScannerView> {
                 ],
               ),
             ),
-
             Align(
               alignment: const Alignment(0.0, -0.6),
               child: Container(
@@ -248,7 +284,6 @@ class _ScannerViewState extends State<ScannerView> {
                 width: screenSize.width * 0.85,
                 decoration: BoxDecoration(
                   border: Border.all(
-                    // A borda fica verde se estiver processando no automático
                     color: _isProcessing ? Colors.greenAccent : Colors.orange,
                     width: _isProcessing ? 3 : 2,
                   ),
@@ -256,7 +291,6 @@ class _ScannerViewState extends State<ScannerView> {
                 ),
               ),
             ),
-
             Align(
               alignment: const Alignment(0.0, -0.4),
               child: Text(
@@ -269,8 +303,6 @@ class _ScannerViewState extends State<ScannerView> {
                 ),
               ),
             ),
-
-            // --- NOVO: Switch do Auto-Scan ---
             Positioned(
               top: 50,
               right: 20,
